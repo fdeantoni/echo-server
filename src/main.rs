@@ -1,5 +1,6 @@
 mod api;
 mod ws;
+mod sse;
 
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -45,6 +46,10 @@ async fn main() {
             ws.on_upgrade(move |websocket| ws::start_ws(system, remote, websocket) )
         });
 
+    let sse = warp::path(".sse")
+        .and(warp::get())
+        .and_then(sse::sse_stream);
+
     // The default route that accepts anything
     let default = warp::any()
         .and(warp::addr::remote())
@@ -62,6 +67,7 @@ async fn main() {
 
     // Create the warp routes
     let routes = ws
+        .or(sse)
         .or(default)
         .with(cors)
         .with(warp::log("echo-server"));
