@@ -1,0 +1,7 @@
+**/target
+**/*.rs.bk
+.env
+
+**/.git
+
+.DS_Store

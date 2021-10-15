@@ -5,6 +5,8 @@ mod sse;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::time::Duration;
 use warp::*;
 
 use tiny_tokio_actor::*;
@@ -73,5 +75,17 @@ async fn main() {
         .with(warp::log("echo-server"));
 
     // Start the server
-    warp::serve(routes).run(addr).await;
+    let (server_shutdown_tx, server_shutdown_rx) = tokio::sync::oneshot::channel();
+    let (_, server) = warp::serve(routes)
+        .bind_with_graceful_shutdown(addr, async {
+            server_shutdown_rx.await.ok();
+        });
+    tokio::task::spawn(server);
+    ::log::info!("Echo server running on {}", &addr);
+
+    let mut signal_stream = signal(SignalKind::interrupt()).unwrap();
+    signal_stream.recv().await;
+
+    let _ = server_shutdown_tx.send(());
+    tokio::time::sleep(Duration::from_millis(200)).await;
 }
