@@ -1,0 +1,18 @@
+[package]
+name = "echo-server"
+version = "0.1.0"
+authors = ["fdeantoni <fdeantoni@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tiny-tokio-actor = "0.2"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+tokio-stream = "0.1"
+uuid = { version = "0.8", features = ["v4"] }
+warp = "0.3"
+log = "0.4"
+env_logger = "0.9"
+dotenv = "0.15.0"
