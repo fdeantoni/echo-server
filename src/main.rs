@@ -1,3 +1,4 @@
+mod api;
 mod ws;
 
 use std::net::SocketAddr;
@@ -6,6 +7,7 @@ use std::str::FromStr;
 use warp::*;
 
 use tiny_tokio_actor::*;
+use warp::hyper::{HeaderMap, StatusCode};
 
 
 #[derive(Clone, Debug)]
@@ -31,10 +33,11 @@ async fn main() {
 
     // Create the event bus and actor system
     let bus = EventBus::<ServerEvent>::new(1000);
-    let system = ActorSystem::new("test", bus);
+    let system = ActorSystem::new("echo", bus);
+
 
     // Create the warp WebSocket route
-    let ws = warp::path!("echo")
+    let ws = warp::path!(".ws")
         .and(warp::any().map(move || system.clone()))
         .and(warp::addr::remote())
         .and(warp::ws())
@@ -42,8 +45,26 @@ async fn main() {
             ws.on_upgrade(move |websocket| ws::start_ws(system, remote, websocket) )
         });
 
-    // Create the warp routes (websocket only in this case, with warp logging added)
-    let routes = ws.with(warp::log("echo-server"));
+    // The default route that accepts anything
+    let default = warp::any()
+        .and(warp::addr::remote())
+        .and(warp::header::headers_cloned())
+        .map(|remote: Option<SocketAddr>, headers: HeaderMap| {
+            let result = api::Response::new(remote, headers);
+            let response = warp::reply::json(&result);
+            Ok(warp::reply::with_status(response, StatusCode::OK))
+        });
+
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_methods(vec!["GET", "POST", "DELETE"])
+        .allow_headers(vec!["Content-Type"]);
+
+    // Create the warp routes
+    let routes = ws
+        .or(default)
+        .with(cors)
+        .with(warp::log("echo-server"));
 
     // Start the server
     warp::serve(routes).run(addr).await;
