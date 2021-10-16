@@ -19,6 +19,7 @@ askama = "0.10"
 prometheus = { version = "0.13", features = ["process"] }
 lazy_static = "1.4"
 warp = "0.3"
+bytes = "1.1"
 log = "0.4"
 env_logger = "0.9"
 dotenv = "0.15.0"

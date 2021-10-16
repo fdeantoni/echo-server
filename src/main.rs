@@ -11,6 +11,7 @@ mod metrics;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
+use bytes::Bytes;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::time::Duration;
 use warp::*;
@@ -69,11 +70,12 @@ async fn main() {
         .and(warp::path::full())
         .and(warp::addr::remote())
         .and(warp::header::headers_cloned())
-        .map(|method: Method, path: FullPath, remote: Option<SocketAddr>, headers: HeaderMap| {
+        .and(warp::body::bytes())
+        .map(|method: Method, path: FullPath, remote: Option<SocketAddr>, headers: HeaderMap, bytes: Bytes| {
             let metric_counter = metrics::ECHO_COUNT
                 .get_metric_with_label_values(&[method.as_str()])
                 .unwrap();
-            let result = api::EchoResponse::new(remote, headers, path);
+            let result = api::EchoResponse::new(remote, method, headers, path, bytes);
             let response = warp::reply::json(&result);
             metric_counter.inc();
             Ok(warp::reply::with_status(response, StatusCode::OK))

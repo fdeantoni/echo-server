@@ -12,13 +12,13 @@ Beyond this it also supports prometheus metrics at [/metrics](http://127.0.0.1:9
 Example GET:
 ```bash
 $ curl -X GET http://127.0.0.1:9000/echo
-{"source":"127.0.0.1:65421","headers":[["host","127.0.0.1:9000"],["user-agent","curl/7.64.1"],["accept","*/*"]]}
+{"source":"127.0.0.1:57730","method":"GET","headers":[["host","127.0.0.1:9000"],["user-agent","curl/7.64.1"],["accept","*/*"]],"path":"/echo"}
 ```
 
 You can do a GET, POST, or DELETE at any path:
 ```bash
-$ curl -X POST http://127.0.0.1:9000/echo/some/dummy/path
-{"source":"127.0.0.1:65421","headers":[["host","127.0.0.1:9000"],["user-agent","curl/7.64.1"],["accept","*/*"]]}
+$ curl -X POST --data "hello there" http://127.0.0.1:9000/echo/some/other/path
+{"source":"127.0.0.1:57884","method":"POST","headers":[["host","127.0.0.1:9000"],["user-agent","curl/7.64.1"],["accept","*/*"],["content-length","11"],["content-type","application/x-www-form-urlencoded"]],"path":"/echo/some/other/path","body":"hello there"}
 ```
 
 For websocket connections use can use [websocat](https://github.com/vi/websocat) to test:
