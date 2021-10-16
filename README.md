@@ -1,8 +1,18 @@
 # Echo Server
 
-This is similar to [jmalloc/echo-server](https://github.com/jmalloc/echo-server) except
-that it is based on rust instead of go. Besides HTTP GET, POST, and DELETE it also supports
-WebSocket (at http://127.0.0.1:9000/.ws) and SSE connections (at http://127.0.0.1:9000/.sse).
+It's purpose is similar to that of [jmalloc/echo-server](https://github.com/jmalloc/echo-server) except
+that it has the following paths defined:
+- http://localhost:9000/
+  the root returns a simple HTML page with the headers received and some extra details
+- http://localhost:9000/echo
+  returns the headers etc in JSON format
+- ws://localhost:9000/ws
+  Provides a websocket connection to an echo server
+- http://localhost:9000/sse
+  Provides an event source connection to a tick timer sending the time every 5 seconds.
+
+
+Beyond this it also supports prometheus metrics at http://127.0.0.1:9000/metrics.
 
 Example GET:
 ```bash

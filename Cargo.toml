@@ -15,6 +15,9 @@ futures = "0.3"
 tokio-stream = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["v4"] }
+# Metrics
+prometheus = { version = "0.13", features = ["process"] }
+lazy_static = "1.4"
 warp = "0.3"
 log = "0.4"
 env_logger = "0.9"
