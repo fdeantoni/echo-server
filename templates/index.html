@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width,initial-scale=1'>
+
+	<title>Echo Server</title>
+
+</head>
+
+<body>
+    <h2>Source: {{source}}</h2>
+	<h2>Request Headers:</h2>
+	<table>
+		<tr>
+			<th>Key</th><th>Value</th>
+		</tr>
+		{% for (key, value) in headers %}
+		<tr>
+		  	<td>{{ key }}</td><td>{{ value }}</td>
+		</tr>
+		{% endfor %}
+</body>
+</html>

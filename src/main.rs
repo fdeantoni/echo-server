@@ -19,6 +19,8 @@ use tiny_tokio_actor::*;
 use warp::hyper::{HeaderMap, Method, StatusCode};
 use warp::path::FullPath;
 
+use askama::Template;
+
 
 #[derive(Clone, Debug)]
 pub struct ServerEvent(String);
@@ -71,7 +73,7 @@ async fn main() {
             let metric_counter = metrics::ECHO_COUNT
                 .get_metric_with_label_values(&[method.as_str()])
                 .unwrap();
-            let result = api::Response::new(remote, headers, path);
+            let result = api::EchoResponse::new(remote, headers, path);
             let response = warp::reply::json(&result);
             metric_counter.inc();
             Ok(warp::reply::with_status(response, StatusCode::OK))
@@ -85,10 +87,9 @@ async fn main() {
             let metric_counter = metrics::ECHO_COUNT
                 .get_metric_with_label_values(&["GET"])
                 .unwrap();
-            let result = format!("<p>Source: {:?}</p><p>Headers: {:?}</p>", remote, headers);
-            let response = warp::reply::html(result);
             metric_counter.inc();
-            response
+            let template = api::IndexTemplate::new(remote, headers).render().unwrap();
+            warp::reply::html(template)
         });
 
     let cors = warp::cors()
