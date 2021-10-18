@@ -7,6 +7,9 @@ that it has the following paths defined:
 - /ws provides a websocket connection to an echo server
 - /sse provides an event source connection to a tick timer sending the time every 5 seconds.
 
+Any other path will still result in a JSON response with headers etc except that the HTTP status code
+returned will be HTTP 404 NOT FOUND.
+
 Beyond this it also supports prometheus metrics at [/metrics](http://127.0.0.1:9000/metrics).
 
 Example GET:

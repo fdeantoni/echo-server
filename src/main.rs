@@ -35,7 +35,7 @@ async fn main() {
     dotenv::from_path(path).ok();
 
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info,tiny_tokio_actor=debug,websocket=debug");
+        std::env::set_var("RUST_LOG", "info");
     }
     env_logger::init();
 
@@ -94,6 +94,23 @@ async fn main() {
             warp::reply::html(template)
         });
 
+    let default = warp::any()
+        .and(warp::method())
+        .and(warp::path::full())
+        .and(warp::addr::remote())
+        .and(warp::header::headers_cloned())
+        .and(warp::body::bytes())
+        .map(|method: Method, path: FullPath, remote: Option<SocketAddr>, headers: HeaderMap, bytes: Bytes| {
+            let metric_counter = metrics::ECHO_COUNT
+                .get_metric_with_label_values(&[method.as_str()])
+                .unwrap();
+            let result = api::EchoResponse::new(remote, method, headers, path, bytes);
+            let response = warp::reply::json(&result);
+            metric_counter.inc();
+            warp::reply::with_status(response, StatusCode::NOT_FOUND)
+        });
+
+
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "POST", "DELETE"])
@@ -105,6 +122,7 @@ async fn main() {
         .or(ws)
         .or(sse)
         .or(echo)
+        .or(default)
         .with(cors)
         .with(warp::log("echo-server"));
 
