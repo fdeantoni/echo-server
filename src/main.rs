@@ -4,6 +4,7 @@ extern crate lazy_static;
 extern crate prometheus;
 
 mod api;
+mod echo;
 mod ws;
 mod sse;
 mod metrics;
@@ -11,14 +12,13 @@ mod metrics;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use bytes::Bytes;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::time::Duration;
 use warp::*;
 
 use tiny_tokio_actor::*;
-use warp::hyper::{HeaderMap, Method, StatusCode};
-use warp::path::FullPath;
+use warp::hyper::HeaderMap;
+
 
 use askama::Template;
 
@@ -52,36 +52,30 @@ async fn main() {
     let metrics = metrics::metrics_handler();
 
     // Create the warp WebSocket route
-    let ws = warp::path!("ws")
+    let ws_route = warp::path!("ws")
         .and(warp::any().map(move || system.clone()))
         .and(warp::addr::remote())
         .and(warp::ws())
         .map(|system: ActorSystem<ServerEvent>, remote: Option<SocketAddr>, ws: warp::ws::Ws| {
             ws.on_upgrade(move |websocket| ws::start_ws(system, remote, websocket) )
-        });
+        }).boxed();
 
-    let sse = warp::path("sse")
+    let sse_route = warp::path("sse")
         .and(warp::get())
-        .and_then(sse::sse_stream);
+        .and_then(sse::sse_stream)
+        .boxed();
 
     // The default route that accepts anything
-    let echo = warp::path("echo")
+    let echo_route = warp::path("echo")
         .and(warp::method())
         .and(warp::path::full())
         .and(warp::addr::remote())
         .and(warp::header::headers_cloned())
         .and(warp::body::bytes())
-        .map(|method: Method, path: FullPath, remote: Option<SocketAddr>, headers: HeaderMap, bytes: Bytes| {
-            let metric_counter = metrics::ECHO_COUNT
-                .get_metric_with_label_values(&[method.as_str()])
-                .unwrap();
-            let result = api::EchoResponse::new(remote, method, headers, path, bytes);
-            let response = warp::reply::json(&result);
-            metric_counter.inc();
-            Ok(warp::reply::with_status(response, StatusCode::OK))
-        });
+        .and_then(echo::ok)
+        .boxed();
 
-    let index = warp::path::end()
+    let index_route = warp::path::end()
         .and(warp::get())
         .and(warp::addr::remote())
         .and(warp::header::headers_cloned())
@@ -92,24 +86,16 @@ async fn main() {
             metric_counter.inc();
             let template = api::IndexTemplate::new(remote, headers).render().unwrap();
             warp::reply::html(template)
-        });
+        }).boxed();
 
-    let default = warp::any()
+    let default_route = warp::any()
         .and(warp::method())
         .and(warp::path::full())
         .and(warp::addr::remote())
         .and(warp::header::headers_cloned())
         .and(warp::body::bytes())
-        .map(|method: Method, path: FullPath, remote: Option<SocketAddr>, headers: HeaderMap, bytes: Bytes| {
-            let metric_counter = metrics::ECHO_COUNT
-                .get_metric_with_label_values(&[method.as_str()])
-                .unwrap();
-            let result = api::EchoResponse::new(remote, method, headers, path, bytes);
-            let response = warp::reply::json(&result);
-            metric_counter.inc();
-            warp::reply::with_status(response, StatusCode::NOT_FOUND)
-        });
-
+        .and_then(echo::not_found)
+        .boxed();
 
     let cors = warp::cors()
         .allow_any_origin()
@@ -117,12 +103,12 @@ async fn main() {
         .allow_headers(vec!["Content-Type"]);
 
     // Create the warp routes
-    let routes = index
+    let routes = index_route
         .or(metrics)
-        .or(ws)
-        .or(sse)
-        .or(echo)
-        .or(default)
+        .or(ws_route)
+        .or(sse_route)
+        .or(echo_route)
+        .or(default_route)
         .with(cors)
         .with(warp::log("echo-server"));
 
