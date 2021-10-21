@@ -17,10 +17,6 @@ use tokio::time::Duration;
 use warp::*;
 
 use tiny_tokio_actor::*;
-use warp::hyper::HeaderMap;
-
-
-use askama::Template;
 
 
 #[derive(Clone, Debug)]
@@ -66,36 +62,12 @@ async fn main() {
         .boxed();
 
     // The default route that accepts anything
-    let echo_route = warp::path("echo")
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::addr::remote())
-        .and(warp::header::headers_cloned())
-        .and(warp::body::bytes())
-        .and_then(echo::ok)
-        .boxed();
+    let echo_route = warp::path("echo").and(echo::echo_handler());
 
     let index_route = warp::path::end()
-        .and(warp::get())
-        .and(warp::addr::remote())
-        .and(warp::header::headers_cloned())
-        .map(|remote: Option<SocketAddr>, headers: HeaderMap| {
-            let metric_counter = metrics::ECHO_COUNT
-                .get_metric_with_label_values(&["GET"])
-                .unwrap();
-            metric_counter.inc();
-            let template = api::IndexTemplate::new(remote, headers).render().unwrap();
-            warp::reply::html(template)
-        }).boxed();
+        .and(echo::template_handler());
 
-    let default_route = warp::any()
-        .and(warp::method())
-        .and(warp::path::full())
-        .and(warp::addr::remote())
-        .and(warp::header::headers_cloned())
-        .and(warp::body::bytes())
-        .and_then(echo::not_found)
-        .boxed();
+    let default_route = warp::any().and(echo::default_handler());
 
     let cors = warp::cors()
         .allow_any_origin()

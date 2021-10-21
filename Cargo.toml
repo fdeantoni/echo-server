@@ -15,6 +15,7 @@ futures = "0.3"
 tokio-stream = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["v4"] }
+whoami = "1.1.5"
 askama = "0.10"
 prometheus = { version = "0.13", features = ["process"] }
 lazy_static = "1.4"

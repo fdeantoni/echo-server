@@ -7,7 +7,7 @@ RUN cd echo-server && cargo build --release
 
 FROM alpine:3.14
 
-RUN apk add --no-cache ca-certificates bind-tools
+RUN apk add --no-cache ca-certificates bind-tools curl wget
 
 RUN addgroup -g 1000 -S echo && adduser -u 1000 -D -S -G echo echo
 
