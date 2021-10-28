@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tiny-tokio-actor = "0.2"
+tiny-tokio-actor = "0.3"
 tokio = { version = "1", features = ["rt", "time", "signal", "rt-multi-thread", "macros"] }
 futures = "0.3"
 tokio-stream = "0.1"
