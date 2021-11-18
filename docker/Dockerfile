@@ -22,7 +22,7 @@ USER echo
 WORKDIR ${APP_HOME}
 
 ENV TZ="Etc/UTC"
-ENV RUST_LOG="warp=info,echo_server=info"
+ENV RUST_LOG="info,echo_server=info"
 ENV HOST_PORT="0.0.0.0:9000"
 
 EXPOSE 9000
