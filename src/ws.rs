@@ -63,7 +63,7 @@ pub async fn start_ws(system: ActorSystem<ServerEvent>, remote: Option<SocketAdd
         .unwrap_or_else(|| Uuid::new_v4().to_string() );
     let actor_name = format!("echo-actor-{}", &addr);
     // Launch the actor on our actor system
-    let mut actor_ref = system.create_actor(&actor_name, actor).await.unwrap();
+    let actor_ref = system.create_actor(&actor_name, actor).await.unwrap();
 
     // Loop over all websocket messages received over ws_in
     while let Some(result) = ws_in.next().await {

@@ -1,8 +1,8 @@
 [package]
 name = "echo-server"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["fdeantoni <fdeantoni@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,13 +14,13 @@ tokio = { version = "1", features = ["rt", "time", "signal", "rt-multi-thread", 
 futures = "0.3"
 tokio-stream = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1.3", features = ["v4"] }
 whoami = "1.1.5"
-askama = "0.10"
+askama = "0.11"
 prometheus = { version = "0.13", features = ["process"] }
 lazy_static = "1.4"
 warp = "0.3"
 bytes = "1.1"
 log = "0.4"
-env_logger = "0.9"
+env_logger = "0.10"
 dotenv = "0.15.0"
