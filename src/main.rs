@@ -26,6 +26,11 @@ pub struct ServerEvent;
 // Mark the struct as a system event message.
 impl SystemEvent for ServerEvent {}
 
+static SVG_CONTENT: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                                <rect width="32" height="32" fill="\#007BFF"/>
+                                <text x="16" y="22" text-anchor="middle" fill="white" font-family="monospace" font-size="8" font-weight="bold">echo</text>
+                              </svg>"#;
+
 #[tokio::main]
 async fn main() {
     let path = std::path::Path::new(".env");
@@ -68,6 +73,16 @@ async fn main() {
 
     let expensive_route = warp::path("expensive").and(expensive::expensive_handler());
 
+    let favicon_route = warp::path("favicon.ico")
+        .and(warp::get())
+        .map(|| {
+            warp::reply::with_header(
+                warp::reply::with_status(SVG_CONTENT, warp::http::StatusCode::OK),
+                "content-type", 
+                "image/svg+xml"
+            )
+        });
+
     let default_route = warp::any().and(echo::default_handler());
 
     let cors = warp::cors()
@@ -90,6 +105,7 @@ async fn main() {
 
     // Create the warp routes
     let routes = index_route
+        .or(favicon_route)
         .or(expensive_route)
         .or(metrics)
         .or(ws_route)
