@@ -8,6 +8,7 @@ mod echo;
 mod ws;
 mod sse;
 mod metrics;
+mod expensive;
 
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -60,11 +61,12 @@ async fn main() {
         .and_then(sse::sse_stream)
         .boxed();
 
-    // The default route that accepts anything
-    let echo_route = warp::path("echo").and(echo::echo_handler());
-
     let index_route = warp::path::end()
         .and(echo::template_handler());
+
+    let echo_route = warp::path("echo").and(echo::echo_handler());
+
+    let expensive_route = warp::path("expensive").and(expensive::expensive_handler());
 
     let default_route = warp::any().and(echo::default_handler());
 
@@ -88,11 +90,13 @@ async fn main() {
 
     // Create the warp routes
     let routes = index_route
+        .or(expensive_route)
         .or(metrics)
         .or(ws_route)
         .or(sse_route)
         .or(echo_route)
         .or(default_route)
+        
         .with(cors)
         .with(log);
 
