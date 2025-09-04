@@ -164,28 +164,6 @@ async fn expensive_post_handler(form: HashMap<String, String>) -> Result<impl Re
     Ok(warp::reply::html(html))
 }
 
-#[instrument]
-async fn expensive_response(params: HashMap<String, String>) -> Result<impl Reply, Rejection> {
-    let prime_limit = params
-        .get("prime_limit")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1000)
-        .max(2)
-        .min(10000);
-    
-    let fib_length = params
-        .get("fib_length")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(30)
-        .max(2)
-        .min(100);
-    
-    info!(prime_limit, fib_length, "Handling expensive computation request");
-    let result = some_expensive_computation(prime_limit, fib_length).await;
-    info!("Expensive computation request completed");
-    Ok(result)
-}
-
 pub fn expensive_handler() -> BoxedFilter<(impl Reply,)> {
     let get_route = warp::path::end()
         .and(warp::get())
@@ -196,10 +174,5 @@ pub fn expensive_handler() -> BoxedFilter<(impl Reply,)> {
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(expensive_post_handler);
     
-    let query_route = warp::path::end()
-        .and(warp::get())
-        .and(warp::query::<HashMap<String, String>>())
-        .and_then(expensive_response);
-    
-    get_route.or(post_route).or(query_route).boxed()
+    get_route.or(post_route).boxed()
 }
