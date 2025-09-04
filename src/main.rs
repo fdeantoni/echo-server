@@ -12,6 +12,8 @@ mod metrics;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
+use tracing::*;
+use otlp_logger::OtlpLogger;
 use warp::*;
 
 use tiny_tokio_actor::*;
@@ -31,7 +33,7 @@ async fn main() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
-    env_logger::init();
+    let logger: OtlpLogger = otlp_logger::init().await.expect("Initialized logger");
 
     let addr = std::env::var("HOST_PORT")
         .ok()
@@ -71,6 +73,19 @@ async fn main() {
         .allow_methods(vec!["GET", "POST", "DELETE"])
         .allow_headers(vec!["Content-Type"]);
 
+    let log = warp::log::custom(|info| {
+        info!(
+            target: "echo-server",
+            "\"{} {}\" {} \"{}\" \"{}\" {:?}",
+            info.method(),
+            info.path(),
+            info.status().as_u16(),
+            info.referer().unwrap_or("-"),
+            info.user_agent().unwrap_or("-"),
+            info.elapsed()
+        );        
+    });
+
     // Create the warp routes
     let routes = index_route
         .or(metrics)
@@ -79,10 +94,12 @@ async fn main() {
         .or(echo_route)
         .or(default_route)
         .with(cors)
-        .with(warp::log("echo-server"));
+        .with(log);
 
     // Start the server
-    ::log::info!("Echo server running on {}", &addr);
+    info!(%addr, "Echo server running");
     warp::serve(routes).run(addr).await;
+
+    logger.shutdown();
 
 }

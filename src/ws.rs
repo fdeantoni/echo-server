@@ -7,6 +7,8 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::ws::WebSocket;
 
+use tracing::*;
+
 use tiny_tokio_actor::*;
 
 use crate::ServerEvent;
@@ -36,7 +38,7 @@ impl Message for EchoRequest {
 #[async_trait]
 impl Handler<ServerEvent, EchoRequest> for WsActor {
     async fn handle(&mut self, msg: EchoRequest, _ctx: &mut ActorContext<ServerEvent>) {
-        log::info!("websocket received: {:?}", &msg);
+        info!(?msg, "websocket received message");
         self.sender.send(msg.0).unwrap()
     }
 }
@@ -65,7 +67,7 @@ pub async fn start_ws(system: ActorSystem<ServerEvent>, websocket: WebSocket) {
         match result {
             Ok(msg) => actor_ref.tell(EchoRequest(msg)).unwrap(),
             Err(error) => {
-                ::log::error!("error processing ws message: {:?}", &error);
+                error!(?error, "error processing ws message");
                 break;
             }
         };
