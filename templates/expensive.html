@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width,initial-scale=1'>
+    
+    <title>Expensive Computation - Echo Server</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #4a5568;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #e6fffa 0%, #f0fff4 100%);
+            color: #2d3748;
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .form-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .form-title {
+            color: #2d3748;
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #4fd1c7;
+            box-shadow: 0 0 0 3px rgba(79, 209, 199, 0.1);
+        }
+        
+        .form-help {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #4fd1c7 0%, #38b2ac 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 209, 199, 0.3);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .result-section {
+            background: #f0fff4;
+            border-left: 4px solid #4fd1c7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .result-title {
+            color: #2d3748;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .result-text {
+            color: #4a5568;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .error-section {
+            background: #fed7d7;
+            border-left: 4px solid #fc8181;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .error-title {
+            color: #742a2a;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .error-text {
+            color: #742a2a;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 1rem 2rem;
+            background: #f7fafc;
+            color: #718096;
+            font-size: 0.9rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 1.5rem;
+            }
+            
+            .form-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Expensive Computation</h1>
+            <p>Hello! I am {{server}}</p>
+        </div>
+        
+        <div class="content">
+            {% if let Some(error) = error %}
+            <div class="error-section">
+                <div class="error-title">Error</div>
+                <div class="error-text">{{ error }}</div>
+            </div>
+            {% endif %}
+            
+            {% if let Some(result) = result %}
+            <div class="result-section">
+                <div class="result-title">Computation Result</div>
+                <div class="result-text">{{ result }}</div>
+            </div>
+            {% endif %}
+            
+            <div class="form-section">
+                <h2 class="form-title">Configure Computation Parameters</h2>
+                
+                <form method="POST" action="/expensive">
+                    <div class="form-group">
+                        <label for="prime_limit">Prime Number Limit</label>
+                        <input 
+                            type="number" 
+                            id="prime_limit" 
+                            name="prime_limit" 
+                            value="{{ prime_limit.unwrap_or(1000) }}"
+                            min="2" 
+                            max="10000" 
+                            required
+                        >
+                        <div class="form-help">Calculate prime numbers up to this limit (2-10,000)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fib_length">Fibonacci Sequence Length</label>
+                        <input 
+                            type="number" 
+                            id="fib_length" 
+                            name="fib_length" 
+                            value="{{ fib_length.unwrap_or(30) }}"
+                            min="2" 
+                            max="100" 
+                            required
+                        >
+                        <div class="form-help">Generate fibonacci sequence of this length (2-100)</div>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">Start Computation</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            Expensive computation service powered by matrix multiplication, prime calculation, and fibonacci generation
+        </div>
+    </div>
+</body>
+</html>

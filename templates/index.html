@@ -144,6 +144,25 @@
             border-top: 1px solid #e2e8f0;
         }
         
+        .nav-link {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #4fd1c7 0%, #38b2ac 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 209, 199, 0.3);
+            text-decoration: none;
+            color: white;
+        }
+        
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
@@ -198,6 +217,10 @@
                     {% endfor %}
                 </tbody>
             </table>
+            
+            <div style="text-align: center;">
+                <a href="/expensive" class="nav-link">Try Expensive Computation</a>
+            </div>
         </div>
         
         <div class="footer">

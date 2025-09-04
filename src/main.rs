@@ -87,8 +87,7 @@ async fn main() {
 
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_methods(vec!["GET", "POST", "DELETE"])
-        .allow_headers(vec!["Content-Type"]);
+        .allow_methods(vec!["GET", "POST", "DELETE"]);
 
     let log = warp::log::custom(|info| {
         info!(
@@ -106,11 +105,11 @@ async fn main() {
     // Create the warp routes
     let routes = index_route
         .or(favicon_route)
-        .or(expensive_route)
-        .or(metrics)
-        .or(ws_route)
-        .or(sse_route)
         .or(echo_route)
+        .or(expensive_route)        
+        .or(ws_route)
+        .or(sse_route)      
+        .or(metrics)  
         .or(default_route)
         
         .with(cors)

@@ -1,6 +1,8 @@
 use warp::{Filter, Rejection, Reply, filters::BoxedFilter};
 use std::collections::HashMap;
 use tracing::*;
+use askama::Template;
+use crate::api;
 
 #[instrument]
 async fn matrix_multiplication() -> Vec<Vec<i32>> {
@@ -91,6 +93,78 @@ async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> String
 
 
 #[instrument]
+async fn expensive_get_handler() -> Result<impl Reply, Rejection> {
+    let server = whoami::fallible::hostname().unwrap_or_else(|_| "unknown".to_string());
+    let template = api::ExpensiveTemplate::new(server);
+    let html = template.render().map_err(|e| {
+        error!("Template render error: {}", e);
+        warp::reject::not_found()
+    })?;
+    Ok(warp::reply::html(html))
+}
+
+#[instrument]
+async fn expensive_post_handler(form: HashMap<String, String>) -> Result<impl Reply, Rejection> {
+    let server = whoami::fallible::hostname().unwrap_or_else(|_| "unknown".to_string());
+    
+    let prime_limit = match form.get("prime_limit").and_then(|s| s.parse::<u32>().ok()) {
+        Some(val) if val >= 2 && val <= 10000 => val,
+        Some(_) => {
+            let template = api::ExpensiveTemplate::with_error(
+                server,
+                None,
+                None,
+                "Prime limit must be between 2 and 10,000".to_string()
+            );
+            let html = template.render().map_err(|_| warp::reject::not_found())?;
+            return Ok(warp::reply::html(html));
+        },
+        None => {
+            let template = api::ExpensiveTemplate::with_error(
+                server,
+                None,
+                None,
+                "Prime limit is required".to_string()
+            );
+            let html = template.render().map_err(|_| warp::reject::not_found())?;
+            return Ok(warp::reply::html(html));
+        }
+    };
+    
+    let fib_length = match form.get("fib_length").and_then(|s| s.parse::<u32>().ok()) {
+        Some(val) if val >= 2 && val <= 100 => val,
+        Some(_) => {
+            let template = api::ExpensiveTemplate::with_error(
+                server,
+                Some(prime_limit),
+                None,
+                "Fibonacci length must be between 2 and 100".to_string()
+            );
+            let html = template.render().map_err(|_| warp::reject::not_found())?;
+            return Ok(warp::reply::html(html));
+        },
+        None => {
+            let template = api::ExpensiveTemplate::with_error(
+                server,
+                Some(prime_limit),
+                None,
+                "Fibonacci length is required".to_string()
+            );
+            let html = template.render().map_err(|_| warp::reject::not_found())?;
+            return Ok(warp::reply::html(html));
+        }
+    };
+    
+    info!(prime_limit, fib_length, "Handling expensive computation request");
+    let result = some_expensive_computation(prime_limit, fib_length).await;
+    info!("Expensive computation request completed");
+    
+    let template = api::ExpensiveTemplate::with_result(server, prime_limit, fib_length, result);
+    let html = template.render().map_err(|_| warp::reject::not_found())?;
+    Ok(warp::reply::html(html))
+}
+
+#[instrument]
 async fn expensive_response(params: HashMap<String, String>) -> Result<impl Reply, Rejection> {
     let prime_limit = params
         .get("prime_limit")
@@ -113,9 +187,19 @@ async fn expensive_response(params: HashMap<String, String>) -> Result<impl Repl
 }
 
 pub fn expensive_handler() -> BoxedFilter<(impl Reply,)> {
-    warp::path::end()
+    let get_route = warp::path::end()
+        .and(warp::get())
+        .and_then(expensive_get_handler);
+    
+    let post_route = warp::path::end()
+        .and(warp::post())
+        .and(warp::body::form::<HashMap<String, String>>())
+        .and_then(expensive_post_handler);
+    
+    let query_route = warp::path::end()
         .and(warp::get())
         .and(warp::query::<HashMap<String, String>>())
-        .and_then(expensive_response)
-        .boxed()
+        .and_then(expensive_response);
+    
+    get_route.or(post_route).or(query_route).boxed()
 }

@@ -48,3 +48,45 @@ impl IndexTemplate {
         }
     }
 }
+
+#[derive(Template)]
+#[template(path = "expensive.html")]
+pub struct ExpensiveTemplate {
+    server: String,
+    prime_limit: Option<u32>,
+    fib_length: Option<u32>,
+    result: Option<String>,
+    error: Option<String>
+}
+
+impl ExpensiveTemplate {
+    pub fn new(server: String) -> Self {
+        ExpensiveTemplate {
+            server,
+            prime_limit: None,
+            fib_length: None,
+            result: None,
+            error: None
+        }
+    }
+    
+    pub fn with_result(server: String, prime_limit: u32, fib_length: u32, result: String) -> Self {
+        ExpensiveTemplate {
+            server,
+            prime_limit: Some(prime_limit),
+            fib_length: Some(fib_length),
+            result: Some(result),
+            error: None
+        }
+    }
+    
+    pub fn with_error(server: String, prime_limit: Option<u32>, fib_length: Option<u32>, error: String) -> Self {
+        ExpensiveTemplate {
+            server,
+            prime_limit,
+            fib_length,
+            result: None,
+            error: Some(error)
+        }
+    }
+}
