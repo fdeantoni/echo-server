@@ -12,15 +12,13 @@ mod metrics;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use tokio::signal::unix::{signal, SignalKind};
-use tokio::time::Duration;
 use warp::*;
 
 use tiny_tokio_actor::*;
 
 
 #[derive(Clone, Debug)]
-pub struct ServerEvent(String);
+pub struct ServerEvent;
 
 // Mark the struct as a system event message.
 impl SystemEvent for ServerEvent {}
@@ -28,7 +26,7 @@ impl SystemEvent for ServerEvent {}
 #[tokio::main]
 async fn main() {
     let path = std::path::Path::new(".env");
-    dotenv::from_path(path).ok();
+    dotenvy::from_path(path).ok();
 
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -50,10 +48,9 @@ async fn main() {
     // Create the warp WebSocket route
     let ws_route = warp::path!("ws")
         .and(warp::any().map(move || system.clone()))
-        .and(warp::addr::remote())
         .and(warp::ws())
-        .map(|system: ActorSystem<ServerEvent>, remote: Option<SocketAddr>, ws: warp::ws::Ws| {
-            ws.on_upgrade(move |websocket| ws::start_ws(system, remote, websocket) )
+        .map(|system: ActorSystem<ServerEvent>, ws: warp::ws::Ws| {
+            ws.on_upgrade(move |websocket| ws::start_ws(system, websocket) )
         }).boxed();
 
     let sse_route = warp::path("sse")
@@ -85,17 +82,7 @@ async fn main() {
         .with(warp::log("echo-server"));
 
     // Start the server
-    let (server_shutdown_tx, server_shutdown_rx) = tokio::sync::oneshot::channel();
-    let (_, server) = warp::serve(routes)
-        .bind_with_graceful_shutdown(addr, async {
-            server_shutdown_rx.await.ok();
-        });
-    tokio::task::spawn(server);
     ::log::info!("Echo server running on {}", &addr);
+    warp::serve(routes).run(addr).await;
 
-    let mut signal_stream = signal(SignalKind::interrupt()).unwrap();
-    signal_stream.recv().await;
-
-    let _ = server_shutdown_tx.send(());
-    tokio::time::sleep(Duration::from_millis(200)).await;
 }

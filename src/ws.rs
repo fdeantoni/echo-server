@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use futures::StreamExt;
 
 use tokio::sync::mpsc;
@@ -14,14 +13,12 @@ use crate::ServerEvent;
 
 #[derive(Clone)]
 struct WsActor {
-    remote: Option<SocketAddr>,
     sender: mpsc::UnboundedSender<warp::ws::Message>
 }
 
 impl WsActor {
-    pub fn new(remote: Option<SocketAddr>, sender: mpsc::UnboundedSender<warp::ws::Message>) -> Self {
+    pub fn new(sender: mpsc::UnboundedSender<warp::ws::Message>) -> Self {
         WsActor {
-            remote,
             sender
         }
     }
@@ -39,13 +36,13 @@ impl Message for EchoRequest {
 #[async_trait]
 impl Handler<ServerEvent, EchoRequest> for WsActor {
     async fn handle(&mut self, msg: EchoRequest, _ctx: &mut ActorContext<ServerEvent>) {
-        log::info!("websocket received from {}: {:?}", self.remote.map(|addr| addr.to_string()).unwrap_or_else(|| "unknown".to_string()), &msg);
+        log::info!("websocket received: {:?}", &msg);
         self.sender.send(msg.0).unwrap()
     }
 }
 
 // Starts a new echo actor on our actor system
-pub async fn start_ws(system: ActorSystem<ServerEvent>, remote: Option<SocketAddr>, websocket: WebSocket) {
+pub async fn start_ws(system: ActorSystem<ServerEvent>, websocket: WebSocket) {
 
     // Split out the websocket into incoming and outgoing
     let (ws_out, mut ws_in) = websocket.split();
@@ -56,12 +53,9 @@ pub async fn start_ws(system: ActorSystem<ServerEvent>, remote: Option<SocketAdd
     task::spawn(receiver.map(Ok).forward(ws_out));
 
     // Create a new echo actor with the newly created sender
-    let actor = WsActor::new(remote, sender);
+    let actor = WsActor::new(sender);
     // Use the websocket client address to generate a unique actor name
-    let addr = remote
-        .map(|addr| addr.to_string())
-        .unwrap_or_else(|| Uuid::new_v4().to_string() );
-    let actor_name = format!("echo-actor-{}", &addr);
+    let actor_name = format!("echo-actor-{}", &Uuid::new_v4());
     // Launch the actor on our actor system
     let actor_ref = system.create_actor(&actor_name, actor).await.unwrap();
 
@@ -71,7 +65,7 @@ pub async fn start_ws(system: ActorSystem<ServerEvent>, remote: Option<SocketAdd
         match result {
             Ok(msg) => actor_ref.tell(EchoRequest(msg)).unwrap(),
             Err(error) => {
-                ::log::error!("error processing ws message from {}: {:?}", &addr, error);
+                ::log::error!("error processing ws message: {:?}", &error);
                 break;
             }
         };
