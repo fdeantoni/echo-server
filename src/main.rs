@@ -83,6 +83,12 @@ async fn main() {
             )
         });
 
+    let teapot_route = warp::path("teapot")
+        .and(warp::get())
+        .map(|| {
+            warp::reply::with_status("I'm a teapot", warp::http::StatusCode::IM_A_TEAPOT)
+        });
+
     let default_route = warp::any().and(echo::default_handler());
 
     let cors = warp::cors()
@@ -90,23 +96,30 @@ async fn main() {
         .allow_methods(vec!["GET", "POST", "DELETE"]);
 
     let log = warp::log::custom(|info| {
-        info!(
-            target: "echo-server",
+        let status = info.status().as_u16();
+        let log_message = format!(
             "\"{} {}\" {} \"{}\" \"{}\" {:?}",
             info.method(),
             info.path(),
-            info.status().as_u16(),
+            status,
             info.referer().unwrap_or("-"),
             info.user_agent().unwrap_or("-"),
             info.elapsed()
-        );        
+        );
+        
+        match status {
+            200..=299 => info!(target: "echo-server", "{}", log_message),
+            418 => warn!(target: "echo-server", "{}", log_message),
+            _ => error!(target: "echo-server", "{}", log_message),
+        }
     });
 
     // Create the warp routes
     let routes = index_route
-        .or(favicon_route)
-        .or(echo_route)
+        .or(favicon_route)       
         .or(expensive_route)        
+        .or(echo_route)
+        .or(teapot_route)
         .or(ws_route)
         .or(sse_route)      
         .or(metrics)  
