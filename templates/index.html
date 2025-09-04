@@ -82,6 +82,7 @@
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.03);
             border: 1px solid #e2e8f0;
+            table-layout: fixed;
         }
         
         .headers-table th {
@@ -94,6 +95,14 @@
             font-size: 0.85rem;
             letter-spacing: 0.5px;
             border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .headers-table th:first-child {
+            width: 40%;
+        }
+        
+        .headers-table th:last-child {
+            width: 60%;
         }
         
         .headers-table td {
@@ -114,7 +123,9 @@
         .key-cell {
             font-weight: 600;
             color: #2d3748;
-            word-break: break-word;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .value-cell {
