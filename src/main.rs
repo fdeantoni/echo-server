@@ -16,6 +16,7 @@ use std::str::FromStr;
 use tracing::*;
 use otlp_logger::OtlpLogger;
 use warp::*;
+use tokio::signal;
 
 use tiny_tokio_actor::*;
 
@@ -130,8 +131,15 @@ async fn main() {
 
     // Start the server
     info!(%addr, "Echo server running");
-    warp::serve(routes).run(addr).await;
-
+    
+    tokio::select! {
+        _ = warp::serve(routes).run(addr) => {},
+        _ = signal::ctrl_c() => {
+            info!("Received Ctrl+C, shutting down gracefully...");
+        }
+    }
+    
+    info!("Server shutdown complete, closing logger...");
     logger.shutdown();
 
 }
