@@ -12,7 +12,7 @@ struct ExpensiveResult {
     fib_length: u32,
     computation_result: String,
     primes_count: usize,
-    fibonacci_value: u64,
+    fibonacci_value: u128,
     execution_time_ms: u64,
 }
 
@@ -67,7 +67,7 @@ async fn prime_calculation(limit: u32) -> Vec<u32> {
 }
 
 #[instrument]
-async fn fibonacci_sequence(n: u32) -> Vec<u64> {
+async fn fibonacci_sequence(n: u32) -> Vec<u128> {
     info!(n, "Generating fibonacci sequence");
     let mut fib = vec![0, 1];
     
@@ -80,7 +80,7 @@ async fn fibonacci_sequence(n: u32) -> Vec<u64> {
 }
 
 #[instrument]
-async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> (String, usize, u64) {
+async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> (String, usize, u128) {
     info!(prime_limit, fib_length, "Starting expensive computation pipeline");
     
     let matrix_span = span!(Level::INFO, "matrix_computation");
