@@ -2,7 +2,29 @@ use warp::{Filter, Rejection, Reply, filters::BoxedFilter};
 use std::collections::HashMap;
 use tracing::*;
 use askama::Template;
+use serde::{Deserialize, Serialize};
 use crate::api;
+
+#[derive(Serialize)]
+struct ExpensiveResult {
+    server: String,
+    prime_limit: u32,
+    fib_length: u32,
+    computation_result: String,
+    primes_count: usize,
+    fibonacci_value: u64,
+    execution_time_ms: u64,
+}
+
+#[derive(Deserialize, Debug)]
+struct ExpensiveQuery {
+    prime_limit: u32,
+    fib_length: u32,
+}
+
+#[derive(Debug)]
+struct ValidationError(String);
+impl warp::reject::Reject for ValidationError {}
 
 #[instrument]
 async fn matrix_multiplication() -> Vec<Vec<i32>> {
@@ -58,7 +80,7 @@ async fn fibonacci_sequence(n: u32) -> Vec<u64> {
 }
 
 #[instrument]
-async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> String {
+async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> (String, usize, u64) {
     info!(prime_limit, fib_length, "Starting expensive computation pipeline");
     
     let matrix_span = span!(Level::INFO, "matrix_computation");
@@ -79,16 +101,17 @@ async fn some_expensive_computation(prime_limit: u32, fib_length: u32) -> String
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     
     let fib_index = (fib_length - 1) as usize;
+    let fib_value = *fibonacci.get(fib_index).unwrap_or(&0);
     let result = format!(
         "Computed {} primes (limit: {}), fibonacci[{}] = {}", 
         primes.len(),
         prime_limit,
         fib_index,
-        fibonacci.get(fib_index).unwrap_or(&0)
+        fib_value
     );
     
     info!(result = %result, "Expensive computation completed");
-    result
+    (result, primes.len(), fib_value)
 }
 
 
@@ -156,7 +179,7 @@ async fn expensive_post_handler(form: HashMap<String, String>) -> Result<impl Re
     };
     
     info!(prime_limit, fib_length, "Handling expensive computation request");
-    let result = some_expensive_computation(prime_limit, fib_length).await;
+    let (result, _, _) = some_expensive_computation(prime_limit, fib_length).await;
     info!("Expensive computation request completed");
     
     let template = api::ExpensiveTemplate::with_result(server, prime_limit, fib_length, result);
@@ -164,8 +187,64 @@ async fn expensive_post_handler(form: HashMap<String, String>) -> Result<impl Re
     Ok(warp::reply::html(html))
 }
 
+#[instrument]
+async fn expensive_json_handler(query: ExpensiveQuery) -> Result<impl Reply, Rejection> {
+    let prime_limit = query.prime_limit;
+    let fib_length = query.fib_length;
+    
+    // Validate parameters
+    if prime_limit < 2 || prime_limit > 10000 {
+        return Err(warp::reject::custom(ValidationError("Prime limit must be between 2 and 10,000".to_string())));
+    }
+    
+    if fib_length < 2 || fib_length > 100 {
+        return Err(warp::reject::custom(ValidationError("Fibonacci length must be between 2 and 100".to_string())));
+    }
+    
+    let server = whoami::fallible::hostname().unwrap_or_else(|_| "unknown".to_string());
+    
+    info!(prime_limit, fib_length, "Handling JSON expensive computation request");
+    let start_time = std::time::Instant::now();
+    let (computation_result, primes_count, fibonacci_value) = some_expensive_computation(prime_limit, fib_length).await;
+    let execution_time_ms = start_time.elapsed().as_millis() as u64;
+    info!("JSON expensive computation request completed");
+    
+    let result = ExpensiveResult {
+        server,
+        prime_limit,
+        fib_length,
+        computation_result,
+        primes_count,
+        fibonacci_value,
+        execution_time_ms,
+    };
+    
+    Ok(warp::reply::json(&result))
+}
+
+async fn handle_validation_error(err: Rejection) -> Result<impl Reply, Rejection> {
+    if let Some(validation_error) = err.find::<ValidationError>() {
+        let error_message = &validation_error.0; // Access the String field
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({
+                "error": error_message
+            })),
+            warp::http::StatusCode::BAD_REQUEST
+        ));
+    }
+    Err(err)
+}
+
+
 pub fn expensive_handler() -> BoxedFilter<(impl Reply,)> {
-    let get_route = warp::path::end()
+    let get_json_route = warp::path::end()
+        .and(warp::get())
+        .and(warp::header::exact_ignore_case("content-type", "application/json"))
+        .and(warp::query::<ExpensiveQuery>())
+        .and_then(expensive_json_handler)
+        .recover(handle_validation_error);
+    
+    let get_html_route = warp::path::end()
         .and(warp::get())
         .and_then(expensive_get_handler);
     
@@ -174,5 +253,5 @@ pub fn expensive_handler() -> BoxedFilter<(impl Reply,)> {
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(expensive_post_handler);
     
-    get_route.or(post_route).boxed()
+    get_json_route.or(get_html_route).or(post_route).boxed()
 }

@@ -54,3 +54,41 @@ The OpenTelemetry logger can be configured with the following additional environ
 - `OTEL_SERVICE_VERSION`: The version of the service.
 - `OTEL_SERVICE_INSTANCE_ID`: The instance ID of the service.
 - `OTEL_DEPLOYMENT_ENVIRONMENT`: The deployment environment of the service.
+
+To simulate some traces, there is an endpoint `/expensive` that will execute some nested functions to generate a trace.
+
+### Expensive Function Details
+
+The `/expensive` endpoint provides a comprehensive demonstration of OpenTelemetry tracing through a multi-stage computational pipeline:
+
+- **GET /expensive**: Returns an interactive form to configure the computation parameters
+- **GET /expensive?prime_limit=N&fib_length=M** (with Content-Type: application/json): Returns computation results in JSON format
+- **POST /expensive**: Executes the expensive computation with user-provided parameters
+
+The computation pipeline includes three instrumented operations:
+1. **Matrix Multiplication**: Performs a 100x100 matrix multiplication operation
+2. **Prime Number Calculation**: Computes all prime numbers up to a specified limit (2-10,000)
+3. **Fibonacci Sequence Generation**: Generates a Fibonacci sequence of specified length (2-100)
+
+Each operation is wrapped in its own tracing span and includes detailed logging with structured data. The pipeline also includes a 500ms artificial delay to demonstrate async operation tracing. All functions are instrumented with the `#[instrument]` macro to automatically generate trace spans with input parameters and execution context.
+
+#### JSON API Usage
+
+To use the JSON endpoint, send a GET request with the appropriate query parameters and Content-Type header:
+
+```console
+$ curl -H "Content-Type: application/json" "http://127.0.0.1:9000/expensive?prime_limit=100&fib_length=10"
+{
+  "server": "hostname",
+  "prime_limit": 100,
+  "fib_length": 10,
+  "computation_result": "Computed 25 primes (limit: 100), fibonacci[9] = 34",
+  "primes_count": 25,
+  "fibonacci_value": 34,
+  "execution_time_ms": 546
+}
+```
+
+**Parameters:**
+- `prime_limit`: Integer between 2 and 10,000 (number of primes to calculate up to)
+- `fib_length`: Integer between 2 and 100 (length of Fibonacci sequence to generate)
