@@ -108,6 +108,11 @@ async fn main() {
             info.elapsed()
         );
         
+        if info.path().starts_with("/metrics") {
+            debug!(target: "echo-server", "{}", log_message);
+            return;
+        }
+        
         match status {
             200..=299 => info!(target: "echo-server", "{}", log_message),
             418 => warn!(target: "echo-server", "{}", log_message),
